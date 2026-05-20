@@ -14,7 +14,7 @@ Má dva podpříkazy:
 | Podpříkaz | Reálný úkol | Vstup | Výstup |
 |---|---|---|---|
 | `curate add "<poznámka>"` | Z raw brainstorm poznámky udělá hotový, validní memory soubor a zařadí ho do indexu | věta volným textem | nový `*.md` + řádek v `MEMORY.md` |
-| `curate audit` | Najde hygienické problémy v celé KB — rozbité odkazy, prošlá data, chybějící indexové řádky, duplicity | cesta ke KB | audit report (markdown) |
+| `curate audit` | Najde hygienické problémy v celé KB — rozbité odkazy, prošlá data, chybějící indexové řádky | cesta ke KB | audit report (markdown) |
 
 ## 2. Proč je to praktické
 
@@ -38,7 +38,7 @@ ne jen na jednom konkrétním Hubu.
 | Workflow — **Sequential** | `add`: klasifikuj → draft → zařaď (každý krok závisí na předchozím) |
 | Workflow — **Parallel** | `audit`: fan-out — paralelní sken stromů KB přes `anyio.create_task_group()`, pak fan-in do agregátoru |
 | Workflow — **Conditional** | `add`: klasifikátor rozhodne typ memory (`feedback`/`project`/`reference`/`decision`/`learning`) a routuje na odpovídající draft-handler |
-| Workflow — **Loop** | `add`: draft → QA evaluator (skóre 0–100) → refiner → opakuj dokud skóre ≥ 85 nebo max 4 iterace |
+| Workflow — **Loop** | `add`: draft → QA evaluator (skóre 0–100) → refiner → opakuj dokud skóre ≥ 85 nebo max 3 iterace |
 | Multi-agent — **Supervisor** | `audit`: kurátor-supervisor deleguje strukturovaným rozhodnutím na specialisty a sám rozhodne, kdy skončit |
 | Praktické použití | Automatizuje reálný memory workflow (viz §2) |
 
@@ -48,13 +48,10 @@ a zároveň demonstruje celou paletu orchestrace.
 
 ## 4. Architektura
 
-```
-                          curate <command>
-                                │
-              ┌─────────────────┴─────────────────┐
-              │                                   │
-        curate add                          curate audit
-   (Conditional → Sequential → Loop)   (Supervisor + Parallel)
+```mermaid
+graph TD
+    CLI["curate (CLI)"] --> ADD["add · Conditional → Sequential → Loop"]
+    CLI --> AUD["audit · Supervisor + Parallel"]
 ```
 
 ### 4.1 `curate add` — Conditional → Sequential → Loop
@@ -137,8 +134,10 @@ Vibe-Coding-HW3/
   JSON schématem — rozhodnutí řídí kód, ne parsování textu.
 - **`audit` je read-only.** Vrací report, nemění soubory. Aplikace patchů je
   mimo MVP rozsah (možné rozšíření).
-- **Modely.** Specialisté a handlery na `sonnet`; supervisor/classifier rovněž
-  `sonnet` (rozhodnutí jsou jednoduchá, ale chceme spolehlivý strukturovaný output).
+- **Modely — token efektivita.** Default je levný `haiku` (classifier,
+  supervisor, specialisté `audit`). Dražší `sonnet` jen tam, kde je potřeba
+  kvalita textu — draft-handlery, `refiner`, `qa_evaluator`. Konstanty
+  `MODEL_LEVNY` / `MODEL_KVALITA` v `common.py`.
 
 ## 7. Realizace
 

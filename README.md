@@ -27,24 +27,32 @@ multi-agent supervisor).
 
 ## Architektura
 
-```
-curate add                         curate audit
-(Conditional → Sequential → Loop)  (Supervisor + Parallel)
+`curate add` — Conditional → Sequential → Loop:
 
-raw poznámka                       knowledge base
-   │                                  │
-classifier ──┐ Conditional         curator-supervisor ──┐ Supervisor
-   ▼         │                        │  delegate/finish │
-draft-handler┘                        ▼                  │
-   │  Sequential                   link-checker ──┐       │
-   ▼                                  │  Parallel  │      │
-QA-loop  Loop                         ├ sken A ────┤      │
- evaluator ⇄ refiner                  ├ sken B ────┤      │
-   │                                  └ sken … ────┘      │
-   ▼                               staleness-detector ────┤
-writer (kb.py)                     index-sync ────────────┘
-   │                                  │
-nový *.md + index řádek            markdown audit report
+```mermaid
+graph TD
+    N[raw poznámka] --> CL[classifier]
+    CL -->|"Conditional: typ memory"| DH[draft-handler]
+    DH --> QA{QA-loop}
+    QA -->|"Loop: skóre nízké"| RF[refiner]
+    RF --> QA
+    QA -->|"skóre ≥ 85 / max 3"| WR["writer · kb.py"]
+    WR --> O["nový *.md + řádek v MEMORY.md"]
+```
+
+`curate audit` — Supervisor + Parallel:
+
+```mermaid
+graph TD
+    KB[knowledge base] --> S[curator-supervisor]
+    S -->|delegate| LC[link-checker]
+    S -->|delegate| SD[staleness-detector]
+    S -->|delegate| IX[index-sync]
+    LC -.->|"Parallel fan-out / fan-in"| PAR[paralelní sken podstromů]
+    LC --> S
+    SD --> S
+    IX --> S
+    S -->|finish| O[markdown audit report]
 ```
 
 Veškerá **deterministika** (extrakce `[[odkazů]]`, parsování frontmatteru,
