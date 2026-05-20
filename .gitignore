@@ -1,0 +1,19 @@
+# Virtuální prostředí a build artefakty
+.venv/
+build/
+dist/
+*.egg-info/
+
+# Tajemství — klíč nikdy do repu
+.env
+
+# Python cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
